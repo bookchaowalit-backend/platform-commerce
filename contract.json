@@ -1,20 +1,42 @@
 {
+  "$schema": "./schema/book-platform.contract.v1.schema.json",
   "schema_version": "book-platform.contract.v1",
   "platform_id": "commerce",
   "repository": "book-commerce-platform",
   "status": "scaffolded",
   "api_version": "v1",
   "data_owner": "book-commerce-platform",
-  "capabilities": ["platform-api", "health", "contract"],
-  "depends_on": [],
+  "capabilities": [
+    "catalog",
+    "cart",
+    "pricing",
+    "order",
+    "promotion"
+  ],
+  "depends_on": [
+    "identity",
+    "payment",
+    "observability"
+  ],
   "current_implementation": {
     "repository": "solo-empire",
-    "source_path": "projects/product/engineering/book-dev/github/bookchaowalit/book-apps/tools/book-ecommerce-scraping"
+    "source_path": "projects/product/engineering/book-dev/github/bookchaowalit/book-apps/tools/book-ecommerce-scraping",
+    "source_paths": [
+      "projects/product/engineering/book-dev/github/bookchaowalit/book-apps/tools/book-ecommerce-scraping"
+    ],
+    "source_status": "adjacent-domain-repository"
   },
   "migration": {
     "compatibility_adapter": "required",
     "shadow_parity": "pending",
     "cutover": "pending",
     "rollback": "required"
-  }
+  },
+  "migration_gates": [
+    "order state parity",
+    "payment boundary",
+    "duplicate order protection"
+  ],
+  "surface_doc": "docs/CONTRACT-SURFACE.md",
+  "interfaces": []
 }
