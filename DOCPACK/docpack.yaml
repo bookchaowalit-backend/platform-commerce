@@ -1,0 +1,8 @@
+system_id: bookchaowalit-backend/book-backend/book-commerce-platform
+prefix: CARD
+brand: "BOOK COMMERCE PLATFORM"
+subtitle: "ขอบเขต contract ของ platform `commerce` ยังไม่มี runtime"
+footer: "Book Commerce Platform — Product Card"
+color: "#2f4b6e"
+audience: internal
+tier: L0
