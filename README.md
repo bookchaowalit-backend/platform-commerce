@@ -5,7 +5,7 @@
 ## Scope
 
 This repository owns the `commerce` capability: catalog, cart, pricing, order, promotion.
-The current source implementation is recorded as `projects/product/engineering/book-dev/github/bookchaowalit/book-apps/tools/book-ecommerce-scraping` in the
+The current source implementation is recorded as `projects/product/engineering/book-dev/github/bookchaowalit/public/book-apps/tools/book-ecommerce-scraping` in the
 parent registry. This checkout is a local scaffold; it contains no production
 provider integration, database writer, credential, or customer payload.
 

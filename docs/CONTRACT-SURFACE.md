@@ -7,7 +7,7 @@ listed there is missing from this page.
 
 - Platform: `commerce` (contract `book-platform.contract.v1`, API `v1`)
 - Status: `scaffolded`; source status: `adjacent-domain-repository`
-- Current implementation: `solo-empire` at `projects/product/engineering/book-dev/github/bookchaowalit/book-apps/tools/book-ecommerce-scraping`
+- Current implementation: `solo-empire` at `projects/product/engineering/book-dev/github/bookchaowalit/public/book-apps/tools/book-ecommerce-scraping`
 - Depends on: `identity`, `payment`, `observability`
 
 Interfaces marked `current-in-solo-empire` are served by the `solo-empire`
