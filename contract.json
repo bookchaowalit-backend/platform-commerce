@@ -2,10 +2,10 @@
   "$schema": "./schema/book-platform.contract.v1.schema.json",
   "schema_version": "book-platform.contract.v1",
   "platform_id": "commerce",
-  "repository": "book-commerce-platform",
+  "repository": "platform-commerce",
   "status": "scaffolded",
   "api_version": "v1",
-  "data_owner": "book-commerce-platform",
+  "data_owner": "platform-commerce",
   "capabilities": [
     "catalog",
     "cart",
