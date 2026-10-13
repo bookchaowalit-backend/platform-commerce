@@ -20,9 +20,9 @@
   ],
   "current_implementation": {
     "repository": "solo-empire",
-    "source_path": "projects/product/engineering/book-dev/github/bookchaowalit/public/book-apps/tools/book-ecommerce-scraping",
+    "source_path": "projects/product/engineering/book-dev/github/bookchaowalit/public/book-apps/tools/commerce-product-scraper",
     "source_paths": [
-      "projects/product/engineering/book-dev/github/bookchaowalit/public/book-apps/tools/book-ecommerce-scraping"
+      "projects/product/engineering/book-dev/github/bookchaowalit/public/book-apps/tools/commerce-product-scraper"
     ],
     "source_status": "adjacent-domain-repository"
   },
