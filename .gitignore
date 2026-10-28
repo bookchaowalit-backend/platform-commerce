@@ -7,3 +7,6 @@ data/
 logs/
 dist/
 build/
+.venv/
+*.egg-info/
+wheelhouse/
