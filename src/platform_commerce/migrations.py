@@ -73,4 +73,9 @@ CREATE TABLE order_line(
   PRIMARY KEY(workspace_id,order_id,item_id),
   FOREIGN KEY(workspace_id,order_id) REFERENCES commerce_order(workspace_id,id));
 CREATE INDEX ON commerce_order(workspace_id,created_at,id);
-""" + ''.join(_rls(t) for t in TABLES))]
+""" + ''.join(_rls(t) for t in TABLES)),
+    # A promotion can be withdrawn (``active``, which needs runtime UPDATE on promotion)
+    # or given an expiry; pricing ignores it from ``ends_at`` on.
+    Migration('0002', """
+ALTER TABLE promotion ADD COLUMN ends_at timestamptz;
+""")]

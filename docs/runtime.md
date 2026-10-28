@@ -41,7 +41,7 @@ Runtime grants (no ownership, CREATE, TRUNCATE or history writes):
 | Table | Privileges |
 |---|---|
 | `catalog_item` | SELECT, INSERT, UPDATE |
-| `promotion` | SELECT, INSERT |
+| `promotion` | SELECT, INSERT, UPDATE |
 | `cart` | SELECT, INSERT, UPDATE |
 | `cart_line` | SELECT, INSERT, UPDATE, DELETE |
 | `commerce_order` | SELECT, INSERT, UPDATE |
@@ -61,7 +61,9 @@ cart holds items of one ISO 4217 currency only. Errors are fixed strings: 422
 `invalid request` for any validation failure (unknown fields, wrong types and floats
 included, and the input is never echoed), 404 `Not found`, 409 with one of
 `Duplicate`, `Cart is not open`, `Item unavailable`, `Idempotency conflict`,
-`Price changed`. Lists take `limit` 1..100 (default 100) and `after` (a UUID) and are
+`Price changed`. Only request validation and the store's `InvalidInput` map to 422;
+any other exception (a plain `ValueError` from a server bug included) is the core's
+redacted 500 `internal server error`. Lists take `limit` 1..100 (default 100) and `after` (a UUID) and are
 ordered by id.
 
 | Method and path | Scope | Notes |
@@ -70,9 +72,10 @@ ordered by id.
 | `GET /v1/catalog/items`, `GET /v1/catalog/items/{id}` | `catalog:read` | |
 | `PATCH /v1/catalog/items/{id}` | `catalog:write` | Any of `name`, `unit_price_minor`, `active`. Placed orders keep their price. |
 | `POST /v1/promotions` | `promotions:write` | `code` (`[A-Z0-9_-]{1,32}`, unique), `currency`, exactly one of `percent_off` (1..100) or `amount_off_minor`, optional `min_subtotal_minor`. 201. |
-| `GET /v1/promotions` | `promotions:read` | |
+| `PATCH /v1/promotions/{id}` | `promotions:write` | Any of `active` (bool) or `ends_at` (RFC 3339 with an offset, or `null` to clear). An empty body, a naive timestamp or `active: null` is 422. Carts carrying the code price without it from then on. |
+| `GET /v1/promotions` | `promotions:read` | Each promotion includes `active` and `ends_at`. |
 | `POST /v1/carts` | `cart:write` | `{currency}`. 201 with the priced cart. |
-| `GET /v1/carts/{id}` | `cart:read` | Priced at current catalog prices. |
+| `GET /v1/carts/{id}` | `cart:read` | An `open` cart is priced at current catalog prices with `order_id: null`. An `ordered` cart returns its order's snapshot (`order_id`, lines, subtotal, discount, total), so it always matches `GET /v1/orders/{order_id}`. |
 | `PUT /v1/carts/{id}/lines/{item_id}` | `cart:write` | `{quantity}` 0..1000; 0 removes the line. Other currency 422, inactive item 409, at most 100 lines. |
 | `PUT /v1/carts/{id}/promotion`, `DELETE /v1/carts/{id}/promotion` | `cart:write` | Attach a code (unknown 404) or detach it. |
 | `POST /v1/orders` | `orders:write` | Header `Idempotency-Key` (`[A-Za-z0-9_.:-]{1,128}`, required). Body `cart_id`, optional `expected_total_minor`. 201 created, 200 replay. |
@@ -88,7 +91,8 @@ A priced cart or order carries `lines` (`item_id`, `sku`, `name`, `unit_price_mi
 
 - `line_total = unit_price_minor × quantity`; `subtotal = Σ line_total`. Integers only;
   a float, a bool or an out-of-range number is rejected.
-- A promotion applies only when it is active, has the cart's currency, and the subtotal
+- A promotion applies only when it is active, not past its `ends_at` (database
+  `clock_timestamp()`), has the cart's currency, and the subtotal
   is at least `min_subtotal_minor` (inclusive). Otherwise the cart shows the code with
   `promotion_applied: false` and no discount.
 - Percent: `discount = subtotal × percent_off // 100` (rounded down to the minor
@@ -99,7 +103,12 @@ A priced cart or order carries `lines` (`item_id`, `sku`, `name`, `unit_price_mi
 ### Order placement (duplicate order protection)
 
 One transaction: an advisory lock on the workspace and key serializes requests for
-that key; the cart row is then locked `FOR UPDATE`.
+that key; the cart row is then locked `FOR UPDATE`, and the priced `catalog_item` rows
+(in id order) and the cart's `promotion` row `FOR SHARE`, so a concurrent price,
+availability or promotion change waits until the order commits and the order matches
+the catalog state it was priced from. The promotion is re-checked here: one withdrawn
+or expired since the buyer's quote gives no discount (or 409 `Price changed` with
+`expected_total_minor`).
 
 - Same key, same request (`cart_id`, `expected_total_minor`, SHA-256 fingerprint):
   the first order is returned with 200, even after a price change.
@@ -154,12 +163,47 @@ tests, no skips), one upstream Starlette/httpx deprecation warning. Without
 durability. `bash scripts/check.sh` passes, `ruff check .` is clean, and a wheel builds.
 CI on the pushed branch is recorded in the handoff, not here.
 
+## Review follow-ups — 2026-10-29 (branch `commerce-followups`)
+
+Four low-severity review findings on main `5f42c4b`, fixed test-first on the same
+local setup (Python 3.12, PostgreSQL 16.2 via `pgserver`).
+
+| Finding | Change |
+|---|---|
+| C1 a promotion could never be withdrawn (no route; runtime role lacked UPDATE) | Migration `0002` adds `promotion.ends_at`; `PATCH /v1/promotions/{id}` (`promotions:write`) sets `active` and/or `ends_at`; pricing treats a withdrawn or expired promotion as not applied, `place_order` re-checks it; `promotion` UPDATE is a required runtime grant checked by readiness. |
+| C2 `GET` of an `ordered` cart repriced from the live catalog | An ordered cart returns its order snapshot and `order_id`; every cart carries `order_id`. |
+| C3 catalog rows were not locked while an order was priced | `place_order` share-locks the priced `catalog_item` rows and the promotion row. |
+| C4 every `ValueError` became 422, hiding server bugs | `store.InvalidInput(ValueError)` for client input; only it maps to 422, everything else is a redacted 500. |
+
+RED (new tests, before any implementation): `20 failed, 84 passed` in
+`runtime_tests` — `update_promotion` missing (C1, 9 cases incl. the
+least-privilege grant test), `KeyError: 'order_id'` (C2), the lock probe saw both
+concurrent writes commit, `{'item': False, 'promotion': False}` (C3), a server-side
+`ValueError` answered 422 and store validation raised plain `ValueError` (C4, 9 cases).
+
+GREEN: `python -m pytest -q` `141 passed` (36 offline, 105 runtime: the 20 new tests
+plus one new readiness case for `promotion` UPDATE), `ruff check .` clean,
+`bash scripts/check.sh` passes.
+
+Mutation checks (each reverted):
+
+| Change | Result |
+|---|---|
+| Drop `FOR SHARE OF i` on catalog rows | lock test failed |
+| Drop `FOR SHARE` on the promotion row | lock test failed |
+| Ignore `ends_at` in pricing | 3 failed (store expiry, order re-check, HTTP PATCH) |
+| Reprice ordered carts again | 3 failed (snapshot, least-privilege flow, HTTP PATCH) |
+| Remove `promotion` UPDATE from readiness | least-privilege grant test failed |
+
+Staging note: an existing runtime role needs `GRANT UPDATE ON promotion` before this
+version is ready (readiness reports 503 until then), and `migrate` must apply `0002`.
+
 ## Deliberate omissions
 
 - Payment: no intent, capture, refund, ledger or `paid` state (D8).
 - Inventory and stock reservation, tax, shipping (that is `platform-logistics`),
   customer accounts or addresses (`platform-identity`), multi-currency carts,
-  promotion stacking, usage limits or expiry dates.
+  promotion stacking, usage limits or start dates.
 - Cart creation is not idempotent (a retry makes a second empty cart); only order
   placement takes an `Idempotency-Key`.
 - No events or outbox: nothing tells other services that an order was placed.
