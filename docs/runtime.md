@@ -13,11 +13,34 @@ code, and the database refuses any order status other than `placed` or `cancelle
 
 ## Installation and lifecycle
 
-Python >=3.12, PostgreSQL >=16. Build and review wheels for this repository and
-`platform-backend-core==0.1.0` (CI pins commit `d00e0119c2e4`); a release bundles
-them and their dependencies in `wheelhouse/` for the `Dockerfile`. Nothing is
-published to PyPI. `Dockerfile` and `railway.toml` are reference release assets; no
-container build or Railway deployment has been run.
+Python >=3.12, PostgreSQL >=16. `platform-backend-core==0.1.0` comes from the
+reviewed commit CI pins (`d00e0119c2e4`). Nothing is published to PyPI.
+`railway.toml` is a reference release asset; no Railway deployment has been run.
+
+### Container image
+
+`docker build .` works from a clean checkout; no pre-staged `wheelhouse/` is
+needed. The `Dockerfile` is two stages:
+
+1. `build` (`python:3.12-slim` plus `git`): `pip wheel` builds this service's wheel
+   and `platform-backend-core` from the same reviewed commit CI installs
+   (`d00e0119c2e47da3942d9c7b4b88828953f8bc5a`), with all transitive dependencies.
+2. `runtime` (`python:3.12-slim`, no git, no build tools): installs only those
+   wheels with `--no-index`, runs as UID/GID `65532`, `PORT=8080`, and keeps
+   `CMD ["python", "-m", "platform_commerce", "serve"]`. Run `migrate` as a
+   separate one-off with the DDL-role DSN (same image, command override).
+
+`.dockerignore` keeps `.git`, `.venv`, build output and `.env*` out of the build
+context. CI job `image` in `shared-runtime.yml` runs `docker build` on every push
+and pull request, then checks that the image imports the service, that
+`python -m platform_commerce --help` runs, and that it runs as a non-root user. It
+never pushes or deploys. `tests/test_build_hygiene.py` (part of `scripts/check.sh`)
+fails if the Dockerfile copies a git-ignored path, stops being multi-stage, pins a
+core commit other than the workflow's, runs the final stage as root or changes the
+CMD, if CI stops building the image, or if any workflow `uses:` is not pinned to a
+40-hex commit SHA (tags go in a trailing comment). Upgrading the core means changing
+the commit in the workflow, the Dockerfile and `[tool.uv.sources]` together; the
+tests fail on any mismatch.
 
 - `python -m platform_commerce migrate`: applies `MIGRATIONS` (namespace `commerce`)
   with the DDL-role `DATABASE_URL`. It is idempotent and never runs at API startup.
@@ -198,6 +221,27 @@ Mutation checks (each reverted):
 Staging note: an existing runtime role needs `GRANT UPDATE ON promotion` before this
 version is ready (readiness reports 503 until then), and `migrate` must apply `0002`.
 
+## Build hygiene — 2026-10-29 (branch `build-hygiene`)
+
+Ported from `platform-developer` `8047108`. Two low-severity findings on main `a933cf6`:
+
+1. `check.yml` and `shared-runtime.yml` used `actions/checkout@v4` and
+   `actions/setup-python@v5` by tag. Both are pinned to commit SHAs (`11d5960a...` =
+   v4, `a26af69b...` = v5, lightweight tags resolved with `gh api .../git/ref/tags/...`),
+   tag in a comment.
+2. The `Dockerfile` copied the git-ignored `wheelhouse/`, so it could not build from a
+   clone. It is now the multi-stage build under "Container image", and CI builds it.
+
+RED (`tests/test_build_hygiene.py` written first, run on the old files):
+`python3 -m unittest tests.test_build_hygiene` 5 of 7 failed (unpinned actions in
+`check.yml` and `shared-runtime.yml`; `wheelhouse` in the Dockerfile; one `FROM`; no
+core commit in the Dockerfile; no `docker build` step). The checker self-test and the
+existing non-root `USER` passed.
+
+GREEN: `bash scripts/check.sh` and `ruff check .` pass; the image build is verified
+only by the CI `image` job (no local Docker). Nothing was pushed to a registry or
+deployed.
+
 ## Deliberate omissions
 
 - Payment: no intent, capture, refund, ledger or `paid` state (D8).
@@ -225,8 +269,8 @@ approval step).
 1. Database: a dedicated database for this service, a DDL role for `migrate`, and a
    NOSUPERUSER NOBYPASSRLS runtime role with exactly the grants above. Connection
    strings go to Infisical `/platform-commerce`.
-2. Image: build `wheelhouse/` (this wheel plus `platform-backend-core` at the CI-pinned
-   commit and dependencies), deploy one Railway `serve` service with the JWT issuer
+2. Image: `docker build .` (see "Container image"; CI already builds it on every
+   push), deploy one Railway `serve` service with the JWT issuer
    `empire-platform`, run `migrate` once with the DDL role, approve the pending
    deployment.
 3. Smoke test with a synthetic workspace token: `/readyz` 200; create an item, a
