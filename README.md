@@ -63,3 +63,12 @@ Before activating a remote or changing a consumer, add sanitized fixtures for
 success, duplicate delivery, timeout and provider failure; prove tenant/privacy
 isolation; compare the old and new contract; and rehearse rollback on a
 disposable state store. Record the evidence in the parent platform registry.
+
+## Runtime pilot (implemented locally, not deployed)
+
+A bounded Python 3.12+ / PostgreSQL 16+ runtime for catalog, cart, pricing,
+promotion and order lives in `src/platform_commerce`. Orders stop at `placed` or
+`cancelled`: payment capture stays outside this boundary (owner decision D8). The
+contract status above stays `scaffolded` until activation evidence exists. See the
+[runtime guide](docs/runtime.md) for the API, lifecycle and verification record;
+`.github/workflows/shared-runtime.yml` runs its tests against PostgreSQL 16.

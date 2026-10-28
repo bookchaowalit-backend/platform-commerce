@@ -30,6 +30,8 @@ consumer.
   served by `solo-empire` today, so no interface is declared yet.
 - The first contract slice must be derived from that repository once it is
   available locally; do not invent routes before then.
+- A bounded runtime pilot (not deployed, not a declared interface yet) is
+  documented in [`runtime.md`](runtime.md).
 - Boundary rules: Commerce owns product, price, cart and order state; it must
   call Payment for payment intents and must not create ledger entries.
 
