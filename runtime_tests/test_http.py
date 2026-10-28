@@ -15,7 +15,7 @@ from psycopg import sql
 
 from platform_commerce.app import create_app
 from platform_commerce.migrations import MIGRATIONS
-from platform_commerce.store import REQUIRED_PRIVILEGES
+from platform_commerce.store import REQUIRED_PRIVILEGES, CommerceStore
 
 ALL = 'catalog:read catalog:write promotions:read promotions:write cart:read cart:write orders:read orders:write'
 
@@ -172,3 +172,55 @@ def test_readiness_requires_each_effective_privilege(setup, kind, target, privil
         assert c.get('/readyz').status_code == 503
         change('GRANT', 'TO')
         assert c.get('/readyz').status_code == 200
+
+
+def test_promotion_patch_deactivates_and_sets_an_expiry(setup):
+    temp, db, verifier, headers = setup
+    migrated(temp)
+    w = uuid4()
+    h = headers(ALL, w)
+    with TestClient(create_app(db, verifier)) as c:
+        item = c.post('/v1/catalog/items', headers=h, json={'sku': 'tea-01', 'name': 'Tea', 'unit_price_minor': 1000, 'currency': 'THB'}).json()
+        promotion = c.post('/v1/promotions', headers=h, json={'code': 'TENOFF', 'currency': 'THB', 'percent_off': 10}).json()
+        assert promotion['ends_at'] is None
+        cid = c.post('/v1/carts', headers=h, json={'currency': 'THB'}).json()['id']
+        c.put(f'/v1/carts/{cid}/lines/{item["id"]}', headers=h, json={'quantity': 1})
+        assert c.put(f'/v1/carts/{cid}/promotion', headers=h, json={'code': 'TENOFF'}).json()['total_minor'] == 900
+        path = f'/v1/promotions/{promotion["id"]}'
+
+        r = c.patch(path, headers=h, json={'active': False})
+        assert r.status_code == 200 and r.json()['active'] is False
+        assert c.get(f'/v1/carts/{cid}', headers=h).json()['total_minor'] == 1000
+        r = c.patch(path, headers=h, json={'active': True, 'ends_at': '2020-01-01T00:00:00Z'})
+        assert r.status_code == 200 and r.json()['active'] is True and r.json()['ends_at'].startswith('2020-01-01')
+        assert c.get(f'/v1/carts/{cid}', headers=h).json()['promotion_applied'] is False
+        r = c.patch(path, headers=h, json={'ends_at': None})
+        assert r.status_code == 200 and r.json()['ends_at'] is None
+        assert c.get(f'/v1/carts/{cid}', headers=h).json()['total_minor'] == 900
+
+        assert c.patch(path, headers=headers('promotions:read', w), json={'active': False}).status_code == 403
+        assert c.patch(path, headers=headers(ALL), json={'active': False}).status_code == 404
+        for body in ({}, {'active': 'no'}, {'ends_at': '2020-01-01T00:00:00'}, {'ends_at': 'SYNTHETIC_MARKER'},
+                     {'active': False, 'code': 'OTHER'}):
+            r = c.patch(path, headers=h, json=body)
+            assert r.status_code == 422 and r.json() == {'detail': 'invalid request'} and 'SYNTHETIC' not in r.text
+
+        order = c.post('/v1/orders', headers=headers(ALL, w, 'order-1'), json={'cart_id': cid}).json()
+        cart = c.get(f'/v1/carts/{cid}', headers=h).json()
+        assert cart['order_id'] == order['id'] and cart['total_minor'] == order['total_minor'] == 900
+
+
+def test_unexpected_server_errors_are_500_not_validation_errors(setup, monkeypatch):
+    temp, db, verifier, headers = setup
+    migrated(temp)
+
+    def bug(*_args, **_kwargs):
+        raise ValueError('SYNTHETIC_MARKER server bug')
+    monkeypatch.setattr(CommerceStore, 'list_items', bug)
+    with TestClient(create_app(db, verifier)) as c:
+        r = c.get('/v1/catalog/items', headers=headers(ALL))
+        assert r.status_code == 500 and r.json() == {'detail': 'internal server error'} and 'SYNTHETIC' not in r.text
+        r = c.get('/v1/promotions', headers=headers(ALL), params={'limit': 0})
+        assert r.status_code == 422 and r.json() == {'detail': 'invalid request'}
+        r = c.post('/v1/carts', headers=headers(ALL), json={'currency': 'thb'})
+        assert r.status_code == 422 and r.json() == {'detail': 'invalid request'}
