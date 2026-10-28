@@ -6,9 +6,9 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from platform_backend_core import create_app as base_app
 from platform_backend_core import require_scope
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
-from .store import CommerceStore, Conflict, NotFound
+from .store import CommerceStore, Conflict, InvalidInput, NotFound
 
 
 class Strict(BaseModel):
@@ -36,6 +36,12 @@ class NewPromotion(Strict):
     min_subtotal_minor: int = 0
 
 
+class PromotionChange(Strict):
+    active: bool | None = None
+    # FastAPI validates parsed JSON, where a timestamp is a string; it must carry an offset.
+    ends_at: AwareDatetime | None = Field(default=None, strict=False)
+
+
 class NewCart(Strict):
     currency: str = Field(max_length=3)
 
@@ -59,7 +65,9 @@ def create_app(database, verifier):
     app.state.readiness_checks['commerce_schema'] = store.ready
 
     # Fixed messages only: never the request body, key, SKU or database error text.
-    @app.exception_handler(ValueError)
+    # Only the store's InvalidInput is a client error; any other exception (a ValueError
+    # from a server bug included) reaches the core boundary, which answers a redacted 500.
+    @app.exception_handler(InvalidInput)
     async def invalid(request, exc):
         return JSONResponse({'detail': 'invalid request'}, 422)
 
@@ -101,6 +109,13 @@ def create_app(database, verifier):
     def create_promotion(body: NewPromotion, p=Depends(require_scope('promotions:write'))):
         return store.create_promotion(p.workspace, body.code, body.currency, percent_off=body.percent_off,
                                       amount_off_minor=body.amount_off_minor, min_subtotal_minor=body.min_subtotal_minor)
+
+    @app.patch('/v1/promotions/{promotion_id}')
+    def update_promotion(promotion_id: UUID, body: PromotionChange, p=Depends(require_scope('promotions:write'))):
+        changes = {k: getattr(body, k) for k in body.model_fields_set}
+        if changes.get('active', False) is None:
+            raise InvalidInput('Invalid promotion')
+        return store.update_promotion(p.workspace, promotion_id, **changes)
 
     @app.get('/v1/promotions')
     def list_promotions(limit: int = page, after: UUID | None = None, p=Depends(require_scope('promotions:read'))):
