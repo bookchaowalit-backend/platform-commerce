@@ -3,7 +3,7 @@
 Status: implemented and locally verified; deployment artifacts staged only. No
 production activation is claimed, and `contract.json` stays `scaffolded` (its guard
 requires activation evidence). The pattern follows `platform-communication`
-(main `b78809e`) and `platform-backend-core` at `88306b28`.
+(main `b78809e`) and `platform-backend-core` at `21d5f44d`.
 
 Scope is this repository's contract capabilities, kept deliberately small:
 catalog items with integer minor-unit prices, carts, deterministic pricing with one
@@ -14,7 +14,7 @@ code, and the database refuses any order status other than `placed` or `cancelle
 ## Installation and lifecycle
 
 Python >=3.12, PostgreSQL >=16. `platform-backend-core==0.1.0` comes from the
-reviewed commit CI pins (`88306b28228f`). Nothing is published to PyPI.
+reviewed commit CI pins (`21d5f44d2622`). Nothing is published to PyPI.
 `railway.toml` is a reference release asset; no Railway deployment has been run.
 
 ### Container image
@@ -24,7 +24,7 @@ needed. The `Dockerfile` is two stages:
 
 1. `build` (`python:3.12-slim` plus `git`): `pip wheel` builds this service's wheel
    and `platform-backend-core` from the same reviewed commit CI installs
-   (`88306b28228f789eecd214a11ca8a0640e9d6233`), with all transitive dependencies.
+   (`21d5f44d26220080cbed43b9807979dc84a8533a`), with all transitive dependencies.
 2. `runtime` (`python:3.12-slim`, no git, no build tools): installs only those
    wheels with `--no-index`, runs as UID/GID `65532`, `PORT=8080`, and keeps
    `CMD ["python", "-m", "platform_commerce", "serve"]`. Run `migrate` as a
