@@ -383,3 +383,12 @@ def test_capture_errors_skips_building_an_event_without_a_transport(monkeypatch)
 ])
 def test_scrub_overlapping_bearer_labels_and_trailing_backslash(text, secret):
     assert secret not in _sentry.scrub(text)
+
+
+@pytest.mark.parametrize('text', [
+    # an oversized JWT with a dotted numeric tail: IP redaction must not erase the dots that mark it
+    'token eyJhbGciOiJSUzI1NiJ9.' + 'Q' * 5000 + '-192.0.2.1 rejected',
+    'token eyJhbGciOiJSUzI1NiJ9.' + 'Q' * 5000 + '.2001:db8::1 rejected',
+])
+def test_scrub_oversized_jwt_decided_on_the_original_text(text):
+    assert 'QQQQQQQQ' not in _sentry.scrub(text)
