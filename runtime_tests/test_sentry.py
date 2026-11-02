@@ -420,3 +420,9 @@ def test_scrub_email_behind_a_bearer_label(text, secret):
 ])
 def test_scrub_bearer_token_with_an_at_suffix(text, secret):
     assert secret not in _sentry.scrub(text)
+
+
+def test_scrub_each_jwt_candidate_is_checked_on_its_own():
+    # a short valid JWT in the same token must not vouch for an oversized one
+    out = _sentry.scrub('eyJabcdef.' + 'Q' * 5000 + '-192.0.2.1,password=eyJabcdef.abcdef.sig')
+    assert 'QQQQQQQQ' not in out
