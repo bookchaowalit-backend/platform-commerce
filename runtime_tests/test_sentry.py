@@ -411,3 +411,12 @@ def test_scrub_nested_url_cannot_vouch_for_the_outer_one(text, secret):
 ])
 def test_scrub_email_behind_a_bearer_label(text, secret):
     assert secret not in _sentry.scrub(text)
+
+
+@pytest.mark.parametrize('text, secret', [
+    # a bearer token followed by "@" that is not a full email must still go
+    ('https://h/?q=Bearer OPAQUE@internal', 'OPAQUE'),
+    ('auth Bearer TOKEN_Z@internal-host x', 'internal-host'),
+])
+def test_scrub_bearer_token_with_an_at_suffix(text, secret):
+    assert secret not in _sentry.scrub(text)
