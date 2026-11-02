@@ -371,3 +371,15 @@ def test_capture_errors_skips_building_an_event_without_a_transport(monkeypatch)
     with pytest.raises(RuntimeError):
         asyncio.run(_sentry.CaptureErrors(broken)({}, None, None))
     assert built == []
+
+
+@pytest.mark.parametrize('text, secret', [
+    # one label's token can be the next label ("Bearer Bearer X"); every token must still go
+    ('auth Bearer Bearer SECRET_X done', 'SECRET_X'),
+    ('password=Bearer Authorization=Bearer OPAQUE_CRED', 'OPAQUE_CRED'),
+    # an unquoted value ending in a lone backslash keeps nothing
+    ('password=abc\\', '\\'),
+    ('password=\\', '\\'),
+])
+def test_scrub_overlapping_bearer_labels_and_trailing_backslash(text, secret):
+    assert secret not in _sentry.scrub(text)
