@@ -343,3 +343,31 @@ def test_scrub_whole_bearer_token_past_any_length_bound():
     # Built from parts; a tail past a span bound must not survive behind the "***".
     out = _sentry.scrub('auth Bearer ' + 'A' * 5000 + 'TAIL_' + 'SECRET x')
     assert 'TAIL_SECRET' not in out and 'AAAA' not in out
+
+
+@pytest.mark.parametrize('text', [
+    # An overlong URL password holding a key=value: the key's value span must not erase the "@"
+    # that tells the fail-closed pass this token is still a credential URL.
+    'dial postgresql://u:' + 'P' * 600 + 'token=x@h/db failed',
+    'dial https://u:' + 'P' * 600 + 'secret=x@h failed',
+])
+def test_scrub_overlong_url_password_decided_on_the_original_text(text):
+    assert 'PPPPPPPPPP' not in _sentry.scrub(text)
+
+
+def test_capture_errors_skips_building_an_event_without_a_transport(monkeypatch):
+    # Building the event reads traceback locals; with nothing to send it must not happen at all.
+    import asyncio
+
+    import sentry_sdk.utils
+
+    sentry_sdk.init(dsn='')
+    built = []
+    monkeypatch.setattr(sentry_sdk.utils, 'event_from_exception', lambda *a, **kw: built.append(a))
+
+    async def broken(scope, receive, send):
+        raise RuntimeError('boom')
+
+    with pytest.raises(RuntimeError):
+        asyncio.run(_sentry.CaptureErrors(broken)({}, None, None))
+    assert built == []
