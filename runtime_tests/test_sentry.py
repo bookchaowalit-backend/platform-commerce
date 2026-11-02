@@ -392,3 +392,12 @@ def test_scrub_overlapping_bearer_labels_and_trailing_backslash(text, secret):
 ])
 def test_scrub_oversized_jwt_decided_on_the_original_text(text):
     assert 'QQQQQQQQ' not in _sentry.scrub(text)
+
+
+@pytest.mark.parametrize('text, secret', [
+    # a nested URL's match must not vouch for the overlong outer credential URL around it
+    ('dial postgresql://u:' + 'S' * 600 + 'https://v:p@h/db failed', 'SSSSSSSSSS'),
+    ('dial postgresql://u:' + 'S' * 600 + 'x://a:b@c/d@h/db failed', 'SSSSSSSSSS'),
+])
+def test_scrub_nested_url_cannot_vouch_for_the_outer_one(text, secret):
+    assert secret not in _sentry.scrub(text)
