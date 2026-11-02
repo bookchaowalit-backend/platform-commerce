@@ -337,3 +337,9 @@ def test_scrub_value_starting_with_an_escaped_quote(text):
 ])
 def test_scrub_bearer_token_behind_a_consumed_label(text, secret):
     assert secret not in _sentry.scrub(text)
+
+
+def test_scrub_whole_bearer_token_past_any_length_bound():
+    # Built from parts; a tail past a span bound must not survive behind the "***".
+    out = _sentry.scrub('auth Bearer ' + 'A' * 5000 + 'TAIL_' + 'SECRET x')
+    assert 'TAIL_SECRET' not in out and 'AAAA' not in out
