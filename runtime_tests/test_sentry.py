@@ -43,6 +43,9 @@ def test_dsn_initialises_errors_only_without_pii(monkeypatch, capsys):
     assert kw['environment'] == 'production'
     assert kw['release'] == 'abc123'
     assert kw['traces_sample_rate'] is None
+    # No tracing also means no forwarding of incoming sentry-trace/baggage (user ids) on our own
+    # outbound requests, such as the JWKS fetch.
+    assert kw['trace_propagation_targets'] == []
     assert kw['send_default_pii'] is False
     assert kw['include_local_variables'] is False
     assert kw['max_request_body_size'] == 'never'
@@ -157,12 +160,12 @@ def test_scrub_is_bounded_on_long_hostile_input():
     import time
 
     n = _sentry.MAX_INPUT_CHARS - 64  # under the pre-cap, so every pattern really runs
-    for hostile in ('a' * n, 'x_' * (n // 2), 'a://' * (n // 4), 'a.' * (n // 2), '%' * n, 'a://b:' * (n // 6), 'x@' + 'a-' * (n // 2), 'eyJ-' * (n // 4), 'a' * 200_000):
+    for hostile in ('a' * n, 'x_' * (n // 2), 'a://' * (n // 4), 'a.' * (n // 2), '%' * n, 'a://b:' * (n // 6), 'x@' + 'a-' * (n // 2), 'eyJ-' * (n // 4), 'token=' * (n // 6), 'pwd:' * (n // 4), 'token="' * (n // 7), 'a' * 200_000):
         start = time.perf_counter()
         out = _sentry.scrub(hostile + ' password')
-        # Linear work takes about 0.3 s on a laptop and up to 2x that on a slow CI runner; a
-        # super-linear pattern on 64 KiB would take far longer.
-        assert time.perf_counter() - start < 1.5
+        # ~0.15 s locally, ~0.5 s on a CI runner under coverage; the quadratic patterns this
+        # guards against took 0.8 s to over 120 s on the same input.
+        assert time.perf_counter() - start < 2.0
         assert len(out) <= _sentry.MAX_SCRUB_CHARS + len(_sentry.TRUNCATED)
 
 
@@ -230,10 +233,14 @@ def test_a_server_500_reaches_sentry_scrubbed(monkeypatch):
         assert r.status_code == 500 and r.json() == {'detail': 'internal server error'}
         sentry_sdk.flush()
         assert len(events) == 1
+        # Reported as unhandled, so unhandled-error filters and alerts still see server failures.
+        assert events[0]['exception']['values'][-1]['mechanism']['handled'] is False
         text = str(events[0])
         assert 'RuntimeError' in text and 'pw-SRV500' not in text and '203.0' '.113.9' not in text
     finally:
-        real_init(dsn=None)
+        # dsn=None would read SENTRY_DSN (still set here) and start a real, unscrubbed client.
+        real_init(dsn='')
+    assert sentry_sdk.get_client().transport is None  # nothing can leave the test process
 
 
 @pytest.mark.parametrize('text, secret', [
@@ -251,3 +258,82 @@ def test_scrub_complete_quoted_values_and_compressed_ipv6(text, secret):
 @pytest.mark.parametrize('text', ['std::vec::Vec failed', 'at 12:30:45 UTC', 'Foo::bar() raised'])
 def test_scrub_keeps_rust_paths_and_times(text):
     assert _sentry.scrub(text) == text
+
+
+@pytest.mark.parametrize('text, secret', [
+    ("cfg password='abc\\\nSECRET_NL tail' end", 'SECRET_NL'),
+    ('cfg {"token": "x\\\ny SECRET_NL2"}', 'SECRET_NL2'),
+    ('peer:2001:db8::1 closed', '2001:db8'),
+    ('addr=fe80::1:2: refused', 'fe80::1'),
+    ('dial [::1]:8080 failed', '::1'),
+])
+def test_scrub_escaped_newlines_and_colon_prefixed_ipv6(text, secret):
+    assert secret not in _sentry.scrub(text)
+
+
+@pytest.mark.parametrize('text, secret', [
+    ('connect host=db password=,SENSITIVE_VALUE dbname=x', 'SENSITIVE_VALUE'),
+    ('connect host=db password=prefix,SECRET_SUFFIX dbname=x', 'SECRET_SUFFIX'),
+    ('connect password=a\\ SECRET_SPACE dbname=x', 'SECRET_SPACE'),
+    ('connect password=pre}SECRET_BRACE x', 'SECRET_BRACE'),
+    ("connect password=pre'SECRET_QUOTE x", 'SECRET_QUOTE'),
+])
+def test_scrub_complete_unquoted_libpq_values(text, secret):
+    out = _sentry.scrub(text)
+    assert secret not in out
+    assert 'dbname=x' in out or 'dbname' not in text
+
+
+@pytest.mark.parametrize('text, secret', [
+    ('{"token":null,"password":"prefix SECRET_SUFFIX"}', 'SECRET_SUFFIX'),
+    ("{'token': 1, 'client_secret': 'a b SECRET_TWO'}", 'SECRET_TWO'),
+    ('password=x,api_key="k SECRET_THREE"', 'SECRET_THREE'),
+    ('{"pwd":"","secret":"s SECRET_FOUR"}', 'SECRET_FOUR'),
+])
+def test_scrub_adjacent_structured_fields(text, secret):
+    assert secret not in _sentry.scrub(text)
+
+
+@pytest.mark.parametrize('text, secret', [
+    # an embedded secret-like key must not consume the next key during any pass
+    ("password=foo,token= sslpassword='prefix SECRET_SUFFIX' dbname=x", 'SECRET_SUFFIX'),
+    # a URL query must not consume the adjacent structured secret
+    ('{"url":"https://example.test/?x=1","password":"prefix SECRET_SUFFIX"}', 'SECRET_SUFFIX'),
+    ('see https://h/p?token=t-AAA&next=1 and {"secret":"s b SECRET_B"}', 'SECRET_B'),
+    ('{"token":"a b SECRET_C","url":"https://h/?q=1"}', 'SECRET_C'),
+    ('token=token=token= password="x y SECRET_D"', 'SECRET_D'),
+])
+def test_scrub_patterns_cannot_consume_each_others_keys(text, secret):
+    out = _sentry.scrub(text)
+    assert secret not in out
+    assert 't-AAA' not in out
+
+
+def test_scrub_serialised_libpq_dsn_with_escaped_quote():
+    # repr()/str() of a libpq DSN doubles its backslashes, so the escaped quote looks like the
+    # closing one; the redaction must still cover the whole password.
+    from psycopg.conninfo import make_conninfo
+
+    dsn = make_conninfo(password="a' b " + 'SECRET_DSN')
+    for text in (repr(dsn), repr({'dsn': dsn}), str(ValueError('connect', dsn)), dsn):
+        assert 'SECRET_DSN' not in _sentry.scrub(text)
+
+
+@pytest.mark.parametrize('text', [
+    "cfg password=\\'a \"b\" c SECRET_EQ\\' end",
+    'cfg password=\\"a \'b\' c SECRET_EQ\\" end',
+])
+def test_scrub_value_starting_with_an_escaped_quote(text):
+    assert 'SECRET_EQ' not in _sentry.scrub(text)
+
+
+@pytest.mark.parametrize('text, secret', [
+    # A libpq value can run through an adjacent field's "Bearer" label; the token must still go.
+    ('password=p,Authorization=Bearer OPAQUE_CRED', 'OPAQUE_CRED'),
+    ('{"password":null,"authorization":"Bearer SENSITIVE_VALUE"}', 'SENSITIVE_VALUE'),
+    ('{"password":"pw","authorization":"Bearer TOP_SECRET_TOKEN"}', 'TOP_SECRET_TOKEN'),
+    ('password=prefix&private-suffix host=db', 'private-suffix'),
+    ('password=p,api_key= \\OPAQUE_BS', 'OPAQUE_BS'),
+])
+def test_scrub_bearer_token_behind_a_consumed_label(text, secret):
+    assert secret not in _sentry.scrub(text)
