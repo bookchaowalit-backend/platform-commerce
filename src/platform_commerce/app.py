@@ -7,7 +7,9 @@ from fastapi.responses import JSONResponse
 from platform_backend_core import create_app as base_app
 from platform_backend_core import require_scope
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from starlette.middleware import Middleware
 
+from ._sentry import CaptureErrors
 from .store import CommerceStore, Conflict, InvalidInput, NotFound
 
 
@@ -61,6 +63,8 @@ class NewOrder(Strict):
 
 def create_app(database, verifier):
     app = base_app('commerce', database, verifier, max_body_bytes=16384)
+    # Last in the list = innermost: inside the core boundary that turns errors into a 500.
+    app.user_middleware.append(Middleware(CaptureErrors))
     store = CommerceStore(database)
     app.state.readiness_checks['commerce_schema'] = store.ready
 
