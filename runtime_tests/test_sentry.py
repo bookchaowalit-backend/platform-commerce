@@ -160,7 +160,9 @@ def test_scrub_is_bounded_on_long_hostile_input():
     for hostile in ('a' * n, 'x_' * (n // 2), 'a://' * (n // 4), 'a.' * (n // 2), '%' * n, 'a://b:' * (n // 6), 'x@' + 'a-' * (n // 2), 'eyJ-' * (n // 4), 'a' * 200_000):
         start = time.perf_counter()
         out = _sentry.scrub(hostile + ' password')
-        assert time.perf_counter() - start < 0.5
+        # Linear work takes about 0.3 s on a laptop and up to 2x that on a slow CI runner; a
+        # super-linear pattern on 64 KiB would take far longer.
+        assert time.perf_counter() - start < 1.5
         assert len(out) <= _sentry.MAX_SCRUB_CHARS + len(_sentry.TRUNCATED)
 
 
