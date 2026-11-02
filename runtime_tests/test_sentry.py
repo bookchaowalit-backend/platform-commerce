@@ -401,3 +401,13 @@ def test_scrub_oversized_jwt_decided_on_the_original_text(text):
 ])
 def test_scrub_nested_url_cannot_vouch_for_the_outer_one(text, secret):
     assert secret not in _sentry.scrub(text)
+
+
+@pytest.mark.parametrize('text, secret', [
+    # a bearer span must not take an email's local part and leave its domain behind
+    ('password=Bearer user=alice@sensitive-customer.example', 'sensitive-customer'),
+    ('Authorization: Bearer alice@example.com', 'example.com'),
+    ('auth Bearer ' + 'A' * 5000 + '@tail-domain.example x', 'tail-domain'),
+])
+def test_scrub_email_behind_a_bearer_label(text, secret):
+    assert secret not in _sentry.scrub(text)
