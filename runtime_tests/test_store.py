@@ -2,6 +2,7 @@
 import os
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import uuid4
 
 import psycopg
@@ -407,7 +408,7 @@ def test_place_order_locks_the_rows_it_prices(store, monkeypatch):
     s, _db, temp = store
     w, actor = uuid4(), uuid4()
     cart, a, _b, promotion = promoted_cart(s, w)
-    blocked = {}
+    blocked: dict[str, Any] = {}
     original = store_module.CommerceStore._order
 
     def concurrent_writes_during_placement(c, order_id):
