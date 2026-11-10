@@ -54,7 +54,7 @@ flowchart LR
   M --> S["python -m platform_commerce serve (runtime DSN)"]
 ```
 
-Sources: `src/platform_commerce/app.py`, `src/platform_commerce/store.py`, `src/platform_commerce/__main__.py`, `railway.toml`, `docs/runtime.md`, `runtime_tests/test_http.py`, `platform-backend-core@21d5f44` `platform_backend_core/http.py`, ops record: book-platforms-status (2026-11-03)
+Sources: `src/platform_commerce/app.py`, `src/platform_commerce/store.py`, `src/platform_commerce/__main__.py`, `.railway/railway.ts`, `docs/runtime.md`, `runtime_tests/test_http.py`, `platform-backend-core@21d5f44` `platform_backend_core/http.py`, ops record: book-platforms-status (2026-11-03)
 
 ## Open questions
 - Caller จริงที่เดิน Flow B วันนี้มีแค่ MCP hub (owner) — ยังไม่มี app consumer; flow ของ consumer ในอนาคตยังไม่ได้ออกแบบ.

@@ -16,7 +16,7 @@ flowchart LR
 | R1 | Contract valid against pinned shared schema (`PRODUCT.md` Success) | `scripts/check.py`, `scripts/check_schema_pin.py` | `tests/test_contract_check.py` (19), `tests/test_drift_checks.py` `SchemaPinTests` | `check.yml` job `contract` (3.11, 3.12) |
 | R2 | Registry entry matches contract, drift 0 (`PRODUCT.md` Measures) | `scripts/check_registry_alignment.py` | `tests/test_drift_checks.py` `RegistryAlignmentTests` | local only (`--solo-empire`), **not in CI** |
 | R3 | Runtime suite passes on PostgreSQL in CI, coverage ≥ gate (`PRODUCT.md`) | all `src/platform_commerce/*` | `runtime_tests/*` | `check.yml` job `python` (Postgres, coverage 94) |
-| R4 | Deployed API answers `/readyz` (`PRODUCT.md`) | `store.ready`, core `readyz` | `runtime_tests/test_store.py::test_ready_requires_current_schema`, `test_http.py::test_readiness_requires_each_effective_privilege`, `test_missing_schema_is_not_ready`, `test_applied_migration_checksum_required` | `railway.toml` healthcheck; live 200 (curl 2026-11-03) |
+| R4 | Deployed API answers `/readyz` (`PRODUCT.md`) | `store.ready`, core `readyz` | `runtime_tests/test_store.py::test_ready_requires_current_schema`, `test_http.py::test_readiness_requires_each_effective_privilege`, `test_missing_schema_is_not_ready`, `test_applied_migration_checksum_required` | `.railway/railway.ts` healthcheck; live 200 (curl 2026-11-03) |
 | R5 | Duplicate order protection (migration gate) | `store.place_order`, `order_fingerprint`, `UNIQUE(workspace_id,idempotency_key)`, `UNIQUE(workspace_id,cart_id)` | `test_store.py::test_concurrent_replays_of_one_key_create_one_order`, `test_changed_request_for_a_key_is_a_conflict`, `test_a_cart_becomes_at_most_one_order_even_under_different_keys`, `test_idempotency_key_shape_is_enforced` | `python` job |
 | R6 | Payment boundary: no payment state (gate + D8) | `migrations.py` CHECK `status IN ('placed','cancelled')`, no payment route | `test_store.py::test_no_order_can_reach_a_payment_state`, `test_http.py::test_payment_is_outside_this_boundary` | `python` job |
 | R7 | Order state parity (gate) | `store.cancel_order` | `test_store.py::test_cancel_is_a_terminal_idempotent_transition` | `python` job; parity vs legacy **not possible** (no legacy order source) |
@@ -28,7 +28,7 @@ flowchart LR
 | R13 | Image builds from clean checkout, non-root, SHA-pinned actions (`runtime.md` Build hygiene) | `Dockerfile`, workflows | `tests/test_build_hygiene.py` | `shared-runtime.yml` job `image` |
 | R14 | Migrations never at startup; generic startup error (`runtime.md`) | `__main__.py` | `runtime_tests/test_lifecycle.py` | `python` job |
 
-Sources: `PRODUCT.md`, `docs/CONTRACT-SURFACE.md`, `docs/runtime.md`, `src/platform_commerce/*.py`, `scripts/*.py`, `tests/*.py`, `runtime_tests/*.py`, `.github/workflows/check.yml`, `.github/workflows/shared-runtime.yml`, `railway.toml`, Railway GraphQL `deployments` (read 2026-11-03)
+Sources: `PRODUCT.md`, `docs/CONTRACT-SURFACE.md`, `docs/runtime.md`, `src/platform_commerce/*.py`, `scripts/*.py`, `tests/*.py`, `runtime_tests/*.py`, `.github/workflows/check.yml`, `.github/workflows/shared-runtime.yml`, `.railway/railway.ts`, Railway GraphQL `deployments` (read 2026-11-03)
 
 ## Open questions
 - ไม่มี requirement ID ทางการ (specs/ หรือ issue). ID R1–R14 ตั้งขึ้นในไฟล์นี้เพื่อ trace เท่านั้น — owner ต้องการ spec folder ตาม ADR-0004 (TDD/SDD) หรือไม่?

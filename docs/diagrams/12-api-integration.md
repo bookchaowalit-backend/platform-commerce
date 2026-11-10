@@ -65,7 +65,7 @@ flowchart LR
 | Webhooks | — | none | — |
 | Events / outbox | — | none (runtime.md omission) | — |
 
-Sources: `src/platform_commerce/app.py`, `src/platform_commerce/store.py`, `src/platform_commerce/__main__.py`, `src/platform_commerce/_sentry.py`, `railway.toml`, `contract.json`, `docs/runtime.md`, `docs/CONTRACT-SURFACE.md`, `platform-backend-core@21d5f44` `http.py`, `auth.py`, `db.py`, ops record: book-platforms-status (2026-11-03), live curl 2026-11-03 (`/readyz` 200, `/healthz` ok, `/v1/orders` 401 without token)
+Sources: `src/platform_commerce/app.py`, `src/platform_commerce/store.py`, `src/platform_commerce/__main__.py`, `src/platform_commerce/_sentry.py`, `.railway/railway.ts`, `contract.json`, `docs/runtime.md`, `docs/CONTRACT-SURFACE.md`, `platform-backend-core@21d5f44` `http.py`, `auth.py`, `db.py`, ops record: book-platforms-status (2026-11-03), live curl 2026-11-03 (`/readyz` 200, `/healthz` ok, `/v1/orders` 401 without token)
 
 ## Open questions
 - ควร declare route เหล่านี้ใน `contract.json` `interfaces` ตอนไหน (CONTRACT-SURFACE บอกห้าม invent route ก่อน derive จาก legacy source)?

@@ -15,7 +15,7 @@ code, and the database refuses any order status other than `placed` or `cancelle
 
 Python >=3.12, PostgreSQL >=16. `platform-backend-core==0.1.0` comes from the
 reviewed commit CI pins (`21d5f44d2622`). Nothing is published to PyPI.
-`railway.toml` is a reference release asset; no Railway deployment has been run.
+`.railway/railway.ts` is a reference release asset; no Railway deployment has been run.
 
 ### Container image
 

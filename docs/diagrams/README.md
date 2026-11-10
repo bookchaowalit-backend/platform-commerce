@@ -14,10 +14,10 @@ Reuse: [`docs/runtime.md`](../runtime.md) (API, pricing, order placement, rollba
 |---|---|---|---|---|
 | 1 | Business process (As-Is / To-Be) | done | [01-business-process.md](01-business-process.md) | `app.py`, `store.py`, `pricing.py`, `migrations.py`, `PRODUCT.md`, `docs/UPGRADE-PLAN.md`, `docs/CONTRACT-SURFACE.md`, `docs/runtime.md` |
 | 2 | Use cases (scopes as actors) | done | [02-use-cases.md](02-use-cases.md) | `app.py`, `__main__.py`, core `auth.py`/`http.py`, ops record |
-| 3 | User flows (API call flows) | done | [03-user-flows.md](03-user-flows.md) | `app.py`, `store.py`, `railway.toml`, `runtime_tests/test_http.py` |
+| 3 | User flows (API call flows) | done | [03-user-flows.md](03-user-flows.md) | `app.py`, `store.py`, `.railway/railway.ts`, `runtime_tests/test_http.py` |
 | 4 | Traceability (RTM) | done (no specs/, IDs local) | [04-traceability.md](04-traceability.md) | `PRODUCT.md`, `docs/*.md`, `src/**`, `tests/**`, `runtime_tests/**`, workflows |
-| 5 | C4 Context | done | [05-c4-context.md](05-c4-context.md) | `contract.json`, `__main__.py`, `_sentry.py`, `railway.toml`, ops record |
-| 6 | C4 Container | done | [06-c4-container.md](06-c4-container.md) | `Dockerfile`, `railway.toml`, `pyproject.toml`, `__main__.py`, core `db.py`/`http.py` |
+| 5 | C4 Context | done | [05-c4-context.md](05-c4-context.md) | `contract.json`, `__main__.py`, `_sentry.py`, `.railway/railway.ts`, ops record |
+| 6 | C4 Container | done | [06-c4-container.md](06-c4-container.md) | `Dockerfile`, `.railway/railway.ts`, `pyproject.toml`, `__main__.py`, core `db.py`/`http.py` |
 | 7 | C4 Component | done | [07-c4-component.md](07-c4-component.md) | `app.py`, `store.py`, `pricing.py`, `_sentry.py`, core `auth.py`/`http.py`/`db.py` |
 | 8 | ADRs | done (7 retro ADRs) | [08-adr/](08-adr/) | see each ADR "Evidence" |
 | 9 | ERD | done (with RLS + grants) | [09-erd.md](09-erd.md) | `migrations.py`, `store.py`, core `migrations.py` |
@@ -27,7 +27,7 @@ Reuse: [`docs/runtime.md`](../runtime.md) (API, pricing, order placement, rollba
 | 13 | Threat model (DFD + STRIDE) | done | [13-threat-model.md](13-threat-model.md) | `src/**`, `Dockerfile`, `.dockerignore`, `pyproject.toml`, core, shared `security.yml`, live curl |
 | 14 | Backup / DR | done (no backup in repo; RTO/RPO not defined) | [14-backup-dr.md](14-backup-dr.md) | `docs/runtime.md`, `migrations.py`, workflows, ops record |
 | 15 | CI/CD pipeline | done | [15-cicd-pipeline.md](15-cicd-pipeline.md) | `check.yml`, `shared-runtime.yml`, shared `ci-python.yml`/`security.yml`, `gh run list` |
-| 16 | Deployment | done | [16-deployment.md](16-deployment.md) | `railway.toml`, `Dockerfile`, `__main__.py`, `_sentry.py`, Railway GraphQL, ops record |
+| 16 | Deployment | done | [16-deployment.md](16-deployment.md) | `.railway/railway.ts`, `Dockerfile`, `__main__.py`, `_sentry.py`, Railway GraphQL, ops record |
 | 17 | Test coverage matrix | done | [17-test-coverage-matrix.md](17-test-coverage-matrix.md) | `tests/*.py`, `runtime_tests/*.py`, `check.yml`, `docs/runtime.md` |
 | 18 | Git / release workflow | done | [18-git-release-workflow.md](18-git-release-workflow.md) | `git log`, `gh pr list`, branch protection + rulesets API, Railway GraphQL |
 | 19 | Service dependency map | done | [19-service-dependency-map.md](19-service-dependency-map.md) | `__main__.py`, `Dockerfile`, `pyproject.toml`, `uv.lock`, `contract.json` |

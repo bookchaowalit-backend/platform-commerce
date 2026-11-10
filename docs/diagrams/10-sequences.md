@@ -90,7 +90,7 @@ sequenceDiagram
   A-->>U: 200 ready or 503 unavailable
 ```
 
-Sources: `src/platform_commerce/app.py`, `src/platform_commerce/store.py`, `src/platform_commerce/_sentry.py`, `platform-backend-core@21d5f44` `http.py`, `auth.py`, `db.py`, `railway.toml`, ops record: book-platforms-status (2026-11-03)
+Sources: `src/platform_commerce/app.py`, `src/platform_commerce/store.py`, `src/platform_commerce/_sentry.py`, `platform-backend-core@21d5f44` `http.py`, `auth.py`, `db.py`, `.railway/railway.ts`, ops record: book-platforms-status (2026-11-03)
 
 ## Open questions
 - ไม่มี

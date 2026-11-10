@@ -40,7 +40,7 @@ git log origin/main --since='90 days ago' --format=%ad --date=short | sort | uni
 
 ข้อจำกัด:
 - Commit SHA ของ deploy มาจาก `cliMessage` ที่คนพิมพ์ — ไม่ใช่ข้อมูลที่ Railway ยืนยัน.
-- Main `fa79d31` (CI/tooling) ไม่ได้ deploy; ไม่ใช่ change ต่อ runtime (`git diff --stat d678a5f fa79d31 -- src Dockerfile railway.toml` ว่าง).
+- Main `fa79d31` (CI/tooling) ไม่ได้ deploy; ไม่ใช่ change ต่อ runtime (`git diff --stat d678a5f fa79d31 -- src Dockerfile .railway/railway.ts` ว่าง).
 - Git commit dates ใน repo ปน timezone (+0700 และ UTC).
 
 Sources: Railway GraphQL `deployments` (project `platform-commerce`, service `commerce-api`, read 2026-11-03), `gh pr list --state all`, `gh pr view 2..12 --json mergedAt,commits`, `gh run list`, `git log origin/main`, ops record: book-platforms-status (2026-11-03)

@@ -47,7 +47,7 @@ flowchart TD
 | Railway | host | service down |
 | GitHub / PyPI / Docker Hub | build | cannot build new image |
 
-Sources: `src/platform_commerce/__main__.py`, `src/platform_commerce/_sentry.py`, `Dockerfile`, `pyproject.toml`, `uv.lock`, `contract.json`, `railway.toml`, `platform-backend-core@21d5f44` `auth.py`, `db.py`, ops record: book-platforms-status (2026-11-03)
+Sources: `src/platform_commerce/__main__.py`, `src/platform_commerce/_sentry.py`, `Dockerfile`, `pyproject.toml`, `uv.lock`, `contract.json`, `.railway/railway.ts`, `platform-backend-core@21d5f44` `auth.py`, `db.py`, ops record: book-platforms-status (2026-11-03)
 
 ## Open questions
 - ไม่มี

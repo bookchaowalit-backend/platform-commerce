@@ -182,7 +182,7 @@ flowchart LR
 
 - repo `bookchaowalit-backend/platform-commerce` `origin/main` `540ca8b` (live runtime `d678a5f`)
 - `PRODUCT.md`, `README.md`, `contract.json`, `docs/runtime.md`, `docs/CONTRACT-SURFACE.md`, `docs/UPGRADE-PLAN.md`
-- `pyproject.toml`, `uv.lock`, `Dockerfile`, `railway.toml`, `.github/workflows/check.yml`, `.github/workflows/shared-runtime.yml`
+- `pyproject.toml`, `uv.lock`, `Dockerfile`, `.railway/railway.ts`, `.github/workflows/check.yml`, `.github/workflows/shared-runtime.yml`
 - `src/platform_commerce/{__main__,app,store,pricing,migrations,_sentry}.py`, `tests/`, `runtime_tests/`
 - `docs/diagrams/` (Core 22 pack, commit `540ca8b`) และ `docs/diagrams/08-adr/ADR-0001…0007`
 - `bookchaowalit-backend/platform-api-gateway@51c4711` `routes.json`; `bookchaowalit/platform-mcp-remote-worker@7d127c2` `src/worker.ts`, `wrangler.toml`

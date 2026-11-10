@@ -30,7 +30,7 @@ flowchart LR
 - Runtime "has no consumers" (runtime.md) — ผลกระทบ data loss วันนี้ต่ำ แต่จะเปลี่ยนเมื่อมี consumer.
 - Central baseline [ADR-0002 production baseline monitoring + backups](https://github.com/bookchaowalit/architecture-docs/blob/main/docs/architecture/decisions/ADR-0002-production-baseline-monitoring-backups.md) — ไม่พบหลักฐานใน repo นี้หรือ ops record ว่า commerce ถูกรวมใน nightly backup.
 
-Sources: `docs/runtime.md` ("Rollback", "Staging plan"), `src/platform_commerce/migrations.py`, `Dockerfile`, `railway.toml`, `.github/workflows/*.yml`, `PRODUCT.md`, ops record: book-platforms-status (2026-11-03)
+Sources: `docs/runtime.md` ("Rollback", "Staging plan"), `src/platform_commerce/migrations.py`, `Dockerfile`, `.railway/railway.ts`, `.github/workflows/*.yml`, `PRODUCT.md`, ops record: book-platforms-status (2026-11-03)
 
 ## Open questions
 - Neon free project `platform-commerce` มี point-in-time restore window เท่าไร และเคยทดสอบ restore หรือไม่?
