@@ -19,6 +19,10 @@ def main():
         verifier = TokenVerifier(issuer=os.environ['JWT_ISSUER'], audience=os.environ['JWT_AUDIENCE'],
                                  public_key=os.environ.get('JWT_PUBLIC_KEY'), jwks_url=os.environ.get('JWT_JWKS_URL'))
         app = create_app(Database(os.environ['DATABASE_URL']), verifier)
+        from . import gateway
+
+        # SPEC-002 (platform-api-gateway): only calls that came through the edge gateway.
+        gateway.install(app, gateway.GatewayCheck.from_env('platform-commerce'))
         import uvicorn
         uvicorn.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', '8080')), access_log=False, limit_concurrency=100)
     except Exception:  # noqa: BLE001 - startup errors are reported without configuration values
