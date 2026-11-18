@@ -41,7 +41,7 @@ Reuse: [`docs/runtime.md`](../runtime.md) (API, pricing, order placement, rollba
 2. **Legacy source path ไม่ตรงกัน**: `contract.json` ชี้ `.../commerce-product-scraper` แต่ README, CONTRACT-SURFACE และ UPGRADE-PLAN ชี้ `.../book-ecommerce-scraping`.
 3. **Deploy ไม่ถูก gate โดย CI**: ไม่มี branch protection/rulesets บน main และ deploy เป็น CLI ~3 นาทีหลัง merge; Git ไม่บอกว่า commit ไหน live (ต้องอ่าน `cliMessage`).
 4. **ไม่มี backup/restore ที่พิสูจน์ได้** สำหรับ Neon `platform-commerce`; RTO/RPO ไม่ได้กำหนด (ผลกระทบต่ำเพราะยังไม่มี consumer).
-5. **`/metrics` ไม่ต้องใช้ token** และ direct Railway URL เปิดสาธารณะ (auth ยังบังคับที่ `/v1`); ไม่มี audit trail ของการแก้ราคา/promotion.
+5. **`/metrics` ต้องมี scope `metrics:read`** และ docs UI ถูกปิดแล้ว (`/openapi.json` ยังเปิดสาธารณะ); direct Railway URL เปิดสาธารณะ (auth บังคับที่ `/v1` และ `/metrics`); ไม่มี audit trail ของการแก้ราคา/promotion.
 6. Dockerfile ใช้ `pip wheel` ตาม range ใน `pyproject.toml` ไม่ใช่ `uv.lock` — image อาจได้ dependency version ต่างจากที่ CI ทดสอบ.
 
 ## Validation

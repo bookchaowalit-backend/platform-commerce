@@ -25,7 +25,7 @@ Reuse: รายละเอียด field-level อยู่ใน [`docs/runt
 | POST | `/v1/orders/{order_id}/cancel` | `orders:write` | 200 / 404 | idempotent (cancel ซ้ำคืน order เดิม) |
 | GET | `/healthz` | none | 200 `{"status":"ok"}` | core |
 | GET | `/readyz` | none | 200 / 503 | core + `commerce_schema` check |
-| GET | `/metrics` | none | 200 text | core; route template × status counters + duration sum |
+| GET | `/metrics` | `metrics:read` | 200 text | core; route template × status counters + duration sum |
 
 Error contract: 401 `unauthorized` (+`WWW-Authenticate: Bearer`), 403 `forbidden`, 404 `Not found`, 409 one of `Duplicate`,
 `Cart is not open`, `Item unavailable`, `Idempotency conflict`, `Price changed`, 413 `request too large`, 422 `invalid request`,

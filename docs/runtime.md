@@ -50,7 +50,7 @@ tests fail on any mismatch.
   `JWT_JWKS_URL` (HTTPS). `PORT` defaults to 8080. Concurrency 100, pool 8, SQL
   timeout 10 s, HTTP boundary 30 s, request body at most 16 KiB. Any startup error
   exits with the fixed message `Service configuration or dependency unavailable`.
-- `GET /healthz` (liveness), `GET /readyz`, `GET /metrics` come from the shared core.
+- `GET /healthz` (liveness), `GET /readyz` come from the shared core; `GET /metrics` comes from the shared core and needs the `metrics:read` scope. `/docs` and `/redoc` are not served; `/openapi.json` stays public.
   Readiness is 200 only when the applied `commerce` migration versions and checksums
   equal the code's, all six tables have forced RLS, and the runtime role holds schema
   `USAGE`, `SELECT` on `platform_schema_migrations` and every privilege below, each

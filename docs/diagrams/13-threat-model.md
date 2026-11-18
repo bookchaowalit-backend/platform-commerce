@@ -26,7 +26,7 @@ flowchart LR
   CALLER -. "if routed" .-> GW
   GW -. "HTTPS" .-> API
   CALLER -- "HTTPS direct Railway URL" --> API
-  ANON -- "/healthz /readyz /metrics" --> API
+  ANON -- "/healthz /readyz /openapi.json" --> API
   API -- "fetch keys" --> JWKS
   API -- "SQL as runtime role" --> DB
   OPS -- "DDL" --> DB
@@ -45,7 +45,7 @@ flowchart LR
 | Caller → API | **D** flood | body ≤ 16 KiB, 30 s timeout, concurrency 100, pool 8, statement timeout 10 s, lists ≤ 100 | no rate limit in code; sleeping service wakes on any request |
 | Caller → API | **E** cross-workspace access | workspace only from `ws`; forced RLS `USING`+`WITH CHECK`; scope per route | scope is not role-based inside a workspace |
 | Gateway → API | **S** bypass edge | auth enforced at service (direct URL `/v1/orders` = 401 without token) | service does not check an edge header; direct Railway URL is public |
-| Anonymous → probes | **I** recon | probes return status only; `/metrics` has route templates and counts only | `/metrics` unauthenticated |
+| Anonymous → probes | **I** recon | probes return status only; `/metrics` has route templates and counts only and needs `metrics:read` | `/metrics` scoped; `/docs` และ `/redoc` ปิดแล้ว |
 | API → JWKS | **S/T** key substitution | HTTPS required, no redirects, size/count bounds, kid match, cache cleared on failure | JWKS URL trusted as configured |
 | API → JWKS | **D** JWKS outage | refresh at most every 60 s | all requests 401 while keys unavailable |
 | API → Neon | **E** privileged runtime role | core refuses SUPERUSER/BYPASSRLS; readiness checks each of 18 grants; no DELETE on orders | DDL DSN custody (Infisical) outside repo |
@@ -60,6 +60,6 @@ Sources: `src/platform_commerce/app.py`, `src/platform_commerce/store.py`, `src/
 
 ## Open questions
 - Commerce อยู่หลัง edge gateway หรือไม่ และควรปิด direct Railway URL หรือไม่?
-- `/metrics` ควรต้องใช้ token หรือไม่?
+- `/metrics` ต้องใช้ token ที่มี `metrics:read` (ตอบแล้ว)
 - ต้องการ audit log สำหรับการแก้ราคา/promotion หรือไม่?
 - Dockerfile `pip wheel` ไม่ใช้ `uv.lock` — image อาจได้ `uvicorn`/`sentry-sdk` คนละ version กับที่ CI ทดสอบ; ยอมรับหรือไม่?

@@ -58,7 +58,8 @@ flowchart LR
 | `cart:read` | read priced cart or ordered snapshot | `GET /v1/carts/{id}` |
 | `orders:write` | place order (Idempotency-Key), cancel | `POST /v1/orders`, `POST /v1/orders/{id}/cancel` |
 | `orders:read` | list, get orders | `GET /v1/orders`, `GET /v1/orders/{id}` |
-| anonymous | liveness, readiness, Prometheus text | `GET /healthz`, `GET /readyz`, `GET /metrics` (core) |
+| anonymous | liveness, readiness, OpenAPI schema | `GET /healthz`, `GET /readyz`, `GET /openapi.json` |
+| `metrics:read` | Prometheus text | `GET /metrics` (core) |
 | operator (DDL role) | `python -m platform_commerce migrate` | CLI only, never at startup |
 
 Workspace isolation: ทุก store call ใช้ `Database.transaction(p.workspace)`; workspace อื่นอ่านเป็น 404 (RLS).

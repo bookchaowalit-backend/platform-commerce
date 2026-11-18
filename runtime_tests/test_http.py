@@ -224,3 +224,25 @@ def test_unexpected_server_errors_are_500_not_validation_errors(setup, monkeypat
         assert r.status_code == 422 and r.json() == {'detail': 'invalid request'}
         r = c.post('/v1/carts', headers=headers(ALL), json={'currency': 'thb'})
         assert r.status_code == 422 and r.json() == {'detail': 'invalid request'}
+
+
+def test_docs_ui_is_gone_metrics_needs_scope_schema_and_probes_stay_public():
+    class NoDatabase:
+        def ready(self):
+            return False
+
+        def close(self):
+            pass
+
+        def transaction(self, workspace):
+            raise AssertionError('database must not be reached')
+
+    verifier, headers = auth()
+    with TestClient(create_app(NoDatabase(), verifier)) as c:
+        for path in ('/docs', '/docs/oauth2-redirect', '/redoc'):
+            assert c.get(path).status_code == 404, path
+        assert c.get('/metrics').status_code == 401
+        assert c.get('/metrics', headers=headers('catalog:read')).status_code == 403
+        assert c.get('/metrics', headers=headers('metrics:read')).status_code == 200
+        assert c.get('/healthz').status_code == 200
+        assert c.get('/openapi.json').status_code == 200
